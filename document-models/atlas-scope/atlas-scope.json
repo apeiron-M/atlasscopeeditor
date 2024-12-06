@@ -1,0 +1,48 @@
+{
+    "id": "powerhouse/atlas-scope",
+    "name": "AtlasScope",
+    "extension": "",
+    "description": "",
+    "author": {
+        "name": "",
+        "website": ""
+    },
+    "specifications": [
+        {
+            "version": 1,
+            "changeLog": [],
+            "state": {
+                "global": {
+                    "schema": "\ntype AtlasScopeState {\n  name: String\n  docNo: String # e.g, A.1\n  content: String # change to markdown later (includes links, tables...)\n  masterStatus: [Status!]! \n  globalTags: [GlobalTag!]!\n\toriginalContextData: [PHID!]!\n\tprovenance: URL # p0Hub backlink\n\tnotionId: String # verify if this can be changed to UUID type\n}\n\n\nenum Status {\n  PLACEHOLDER\n  PROVISIONAL # enables ecosystem participants to interact with the material in a practical context, resulting in valuable feedback or other data concerning the Document's appropriateness.\n  APPROVED # material instance can be integrated into the Atlas\n  DEFERRED\n  ARCHIVED\n}\n\nenum GlobalTag {\n    RECURSIVE_IMPROVEMENT,\n    SCOPE_ADVISOR,\n    DAO_TOOLKIT,\n    PURPOSE_SYSTEM,\n    ML__LOW_PRIORITY,\n    EXTERNAL_REFERENCE,\n    ML__DEFER,\n    SUBDAO_INCUBATION,\n    V1__MIP,\n    ML__HIGH_PRIORITY,\n    ECOSYSTEM_INTELLIGENCE,\n    LEGACY_TERM__USE_APPROVED,\n    CAIS,\n    INTERNAL_REFERENCE,\n    FACILITATORDAO,\n    ML___MED_PRIORITY,\n    AVC,\n    P0_HUB_ENTRY_NEEDED,\n    ANON_WORKFORCE,\n    NEWCHAIN,\n    ML__SUPPORT_DOCS_NEEDED,\n    SUBDAO_REWARDS,\n    TWO_STAGE_BRIDGE,\n}\n\n\n\n\n",
+                    "initialValue": "{\n  \"name\": \"\",\n  \"docNo\": \"\",\n  \"content\": \"\",\n  \"masterStatus\": [],\n  \"globalTags\": [],\n  \"originalContextData\": [],\n  \"provenance\": \"\",\n  \"notionId\": \"\"\n}",
+                    "examples": []
+                },
+                "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                }
+            },
+            "modules": [
+                {
+                    "id": "Ng78UMrio8BQNuva9I3NFpbAyz0=",
+                    "name": "scope",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "rt39jVAtpvRXEtejPtL8BYcC1gs=",
+                            "name": "UPDATE_SCOPE",
+                            "description": "",
+                            "schema": "# scope\n\ninput UpdateScopeInput {\n  id: OID!\n  name: String\n  docNo: String\n  content: String\n  masterStatus: [Status!]!\n  globalTags: [String]\n  originalContextData: [PHID!]!\n  provenance: URL\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
