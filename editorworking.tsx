@@ -194,7 +194,7 @@ export default function Editor(props: IProps) {
       );
       
       if (confirmSwitch) {
-        // Apply changes then switch
+        // Apply changes first
         setScopeStatuses(pendingStatus);
         setScopeTags(pendingTags);
         
@@ -222,6 +222,7 @@ export default function Editor(props: IProps) {
       }
     }
     
+    // Always switch to new tab after handling changes
     setActiveTab(newTab);
   };
 

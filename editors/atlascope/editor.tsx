@@ -259,6 +259,12 @@ export default function Editor(props: IProps) {
     );
   };
 
+  const handleArticleAreaClick = () => {
+    window.alert(
+      "Articles cannot be manually added here. They are automatically populated from the Notion API based on the scope's content structure."
+    );
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       {/* Top Navigation */}
@@ -295,7 +301,10 @@ export default function Editor(props: IProps) {
       {/* Main Content */}
       <div style={{ display: "flex", flex: 1, padding: "20px", gap: "24px" }}>
         {/* Left Sidebar */}
-        <div style={{ width: "300px" }}>
+        <div 
+          style={{ width: "300px" }}
+          onClick={handleArticleAreaClick}
+        >
           {SCOPE_CONTENT[activeTab].articles.length > 0 ? (
             SCOPE_CONTENT[activeTab].articles.map(article => (
               <div
@@ -304,7 +313,7 @@ export default function Editor(props: IProps) {
                   padding: "8px",
                   fontSize: "14px",
                   color: "#666",
-                  cursor: "pointer"
+                  cursor: "help"
                 }}
               >
                 {article.title}
@@ -315,9 +324,10 @@ export default function Editor(props: IProps) {
               padding: "8px", 
               fontSize: "14px", 
               color: "#666",
-              fontStyle: "italic" 
+              fontStyle: "italic",
+              cursor: "help"
             }}>
-              No articles yet. Articles for {activeTab} scope will be displayed here.
+              No articles yet. Articles for {activeTab} scope will be displayed here when fetched from Notion API.
             </div>
           )}
         </div>
