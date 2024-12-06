@@ -100,7 +100,10 @@ export default function Editor(props: IProps) {
   const [name, setName] = useState(state.name || "");
   const [newPhid, setNewPhid] = useState("");
   const [newTag, setNewTag] = useState("");
-  const [provenance, setProvenance] = useState(state.provenance || "");
+  const [provenanceLinks, setProvenanceLinks] = useState<string[]>(
+    state.provenance ? [state.provenance] : []
+  );
+  const [newProvenance, setNewProvenance] = useState("");
   const [scopeStatuses, setScopeStatuses] = useState<ScopeStatus>(() => {
     // Initialize with default status for each scope
     return NAV_TABS.reduce((acc, tab) => ({
@@ -123,6 +126,7 @@ export default function Editor(props: IProps) {
   const [pendingTags, setPendingTags] = useState<ScopeTags>(() => ({
     ...scopeTags
   }));
+  const [isEditingProvenance, setIsEditingProvenance] = useState(false);
 
   // Update pending state when switching tabs
   useEffect(() => {
@@ -168,7 +172,7 @@ export default function Editor(props: IProps) {
         masterStatus: [pendingStatus[activeTab] as Status],
         globalTags: pendingTags[activeTab],
         originalContextData: state.originalContextData,
-        provenance,
+        provenance: provenanceLinks[provenanceLinks.length - 1] || "",
       })
     );
     
@@ -207,7 +211,7 @@ export default function Editor(props: IProps) {
             masterStatus: [pendingStatus[activeTab] as Status],
             globalTags: pendingTags[activeTab],
             originalContextData: state.originalContextData,
-            provenance,
+            provenance: provenanceLinks[provenanceLinks.length - 1] || "",
           })
         );
 
@@ -226,8 +230,26 @@ export default function Editor(props: IProps) {
     setActiveTab(newTab);
   };
 
-  const addPhid = () => {
-    if (newPhid) {
+  const validateInput = (input: string): boolean => {
+    // Accept both PHID formats and regular document names
+    return input.startsWith('phd://') || 
+           input.startsWith('phd:eip155:') || 
+           input.trim().length > 0;  // Allow any non-empty string
+  };
+
+  const formatUrl = (input: string): string => {
+    if (input.startsWith('phd://')) {
+      return input;
+    } else if (input.startsWith('phd:eip155:')) {
+      return `https://etherscan.io/address/${input.split(':')[3]}`;
+    }
+    return '#'; // For regular document names, no link
+  };
+
+  const addPhid = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && newPhid.trim()) {
+      const updatedPhids = [...state.originalContextData, newPhid.trim()];
+      
       dispatch(
         actions.updateScope({
           id: document.id,
@@ -236,8 +258,8 @@ export default function Editor(props: IProps) {
           content: state.content,
           masterStatus: [scopeStatuses[activeTab] as Status],
           globalTags: state.globalTags,
-          originalContextData: [...state.originalContextData, newPhid],
-          provenance,
+          originalContextData: updatedPhids,
+          provenance: provenanceLinks[provenanceLinks.length - 1] || "",
         })
       );
       setNewPhid("");
@@ -254,7 +276,7 @@ export default function Editor(props: IProps) {
         masterStatus: [scopeStatuses[activeTab] as Status],
         globalTags: state.globalTags,
         originalContextData: state.originalContextData.filter(p => p !== phidToRemove),
-        provenance,
+        provenance: provenanceLinks[provenanceLinks.length - 1] || "",
       })
     );
   };
@@ -263,6 +285,49 @@ export default function Editor(props: IProps) {
     window.alert(
       "Articles cannot be manually added here. They are automatically populated from the Notion API based on the scope's content structure."
     );
+  };
+
+  const handleProvenanceSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && newProvenance.trim()) {
+      setProvenanceLinks([...provenanceLinks, newProvenance.trim()]);
+      setNewProvenance("");
+      
+      dispatch(
+        actions.updateScope({
+          id: document.id,
+          name,
+          docNo: state.docNo,
+          content: state.content,
+          masterStatus: [scopeStatuses[activeTab] as Status],
+          globalTags: state.globalTags,
+          originalContextData: state.originalContextData,
+          provenance: newProvenance.trim(),
+        })
+      );
+    }
+  };
+
+  const removeProvenance = (linkToRemove: string) => {
+    const updatedLinks = provenanceLinks.filter(link => link !== linkToRemove);
+    setProvenanceLinks(updatedLinks);
+    
+    dispatch(
+      actions.updateScope({
+        id: document.id,
+        name,
+        docNo: state.docNo,
+        content: state.content,
+        masterStatus: [scopeStatuses[activeTab] as Status],
+        globalTags: state.globalTags,
+        originalContextData: state.originalContextData,
+        provenance: updatedLinks[updatedLinks.length - 1] || "",
+      })
+    );
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    // Could add a temporary "Copied!" message here if desired
   };
 
   return (
@@ -302,7 +367,15 @@ export default function Editor(props: IProps) {
       <div style={{ display: "flex", flex: 1, padding: "20px", gap: "24px" }}>
         {/* Left Sidebar */}
         <div 
-          style={{ width: "300px" }}
+          style={{ 
+            width: "300px",
+            backgroundColor: "#f5f5f5",
+            border: "1px solid #ccc",
+            borderRadius: "2px",
+            cursor: "not-allowed",
+            height: "fit-content",
+            alignSelf: "flex-start"
+          }}
           onClick={handleArticleAreaClick}
         >
           {SCOPE_CONTENT[activeTab].articles.length > 0 ? (
@@ -313,7 +386,9 @@ export default function Editor(props: IProps) {
                   padding: "8px",
                   fontSize: "14px",
                   color: "#666",
-                  cursor: "help"
+                  borderBottom: "1px solid #e0e0e0",
+                  cursor: "not-allowed",
+                  wordBreak: "break-word"
                 }}
               >
                 {article.title}
@@ -325,7 +400,7 @@ export default function Editor(props: IProps) {
               fontSize: "14px", 
               color: "#666",
               fontStyle: "italic",
-              cursor: "help"
+              cursor: "not-allowed"
             }}>
               No articles yet. Articles for {activeTab} scope will be displayed here when fetched from Notion API.
             </div>
@@ -341,11 +416,13 @@ export default function Editor(props: IProps) {
           {/* Description Box */}
           <div style={{ 
             padding: "12px", 
-            border: "1px solid #000", 
+            border: "1px solid #ccc", 
             marginBottom: "24px",
             fontSize: "14px",
             color: SCOPE_CONTENT[activeTab].description.startsWith("//") ? "#666" : "inherit",
-            fontStyle: SCOPE_CONTENT[activeTab].description.startsWith("//") ? "italic" : "normal"
+            fontStyle: SCOPE_CONTENT[activeTab].description.startsWith("//") ? "italic" : "normal",
+            backgroundColor: "#f5f5f5",
+            cursor: "not-allowed"
           }}>
             {SCOPE_CONTENT[activeTab].description}
           </div>
@@ -356,18 +433,94 @@ export default function Editor(props: IProps) {
             <div style={{ flex: 1 }}>
               <div style={{ marginBottom: "16px" }}>
                 <div style={{ fontSize: "14px", marginBottom: "4px" }}>Provenance</div>
-                <input
-                  type="text"
-                  value={provenance}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setProvenance(e.target.value)}
-                  placeholder="https://notion.so/p0hub..."
-                  style={{ 
-                    width: "100%", 
-                    padding: "4px 8px",
-                    border: "1px solid #ccc",
-                    fontSize: "14px"
-                  }}
-                />
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {provenanceLinks.map((link, index) => (
+                    <div 
+                      key={index}
+                      style={{ 
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "4px 8px",
+                        border: "1px solid #ccc",
+                        borderRadius: "2px",
+                      }}
+                    >
+                      <a 
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: "#2196f3",
+                          textDecoration: "none",
+                          flex: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap"
+                        }}
+                      >
+                        {link}
+                      </a>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        <button
+                          onClick={() => copyToClipboard(link)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "4px",
+                            display: "flex",
+                            alignItems: "center"
+                          }}
+                          title="Copy link"
+                        >
+                          <svg 
+                            width="16" 
+                            height="16" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2"
+                            strokeLinecap="round" 
+                            strokeLinejoin="round"
+                          >
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => removeProvenance(link)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "4px",
+                            fontSize: "16px",
+                            display: "flex",
+                            alignItems: "center"
+                          }}
+                          title="Remove link"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <input
+                    type="text"
+                    value={newProvenance}
+                    onChange={(e) => setNewProvenance(e.target.value)}
+                    onKeyDown={handleProvenanceSubmit}
+                    placeholder="Add a provenance URL..."
+                    style={{ 
+                      width: "100%", 
+                      padding: "4px 8px",
+                      border: "1px solid #ccc",
+                      fontSize: "14px"
+                    }}
+                  />
+                </div>
               </div>
 
               <div style={{ marginBottom: "16px" }}>
@@ -375,20 +528,28 @@ export default function Editor(props: IProps) {
                 <input
                   type="text"
                   value={name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+                  readOnly
                   placeholder="GOVERNANCE SCOPE"
                   style={{ 
                     width: "100%", 
                     padding: "4px 8px",
                     border: "1px solid #ccc",
-                    fontSize: "14px"
+                    fontSize: "14px",
+                    backgroundColor: "#f5f5f5",
+                    cursor: "not-allowed"
                   }}
                 />
               </div>
 
               <div style={{ marginBottom: "16px" }}>
                 <div style={{ fontSize: "14px", marginBottom: "4px" }}>Original Context Data</div>
-                <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+                <div style={{ 
+                  display: "flex", 
+                  gap: "8px", 
+                  marginBottom: "8px", 
+                  flexWrap: "wrap",
+                  minHeight: state.originalContextData.length ? "32px" : "0"
+                }}>
                   {state.originalContextData.map((phid) => (
                     <div 
                       key={phid}
@@ -399,7 +560,8 @@ export default function Editor(props: IProps) {
                         alignItems: "center",
                         gap: "4px",
                         fontSize: "14px",
-                        backgroundColor: "#fff"
+                        backgroundColor: "#fff",
+                        borderRadius: "2px"
                       }}
                     >
                       {phid}
@@ -410,7 +572,8 @@ export default function Editor(props: IProps) {
                           border: "none",
                           cursor: "pointer",
                           padding: "0 2px",
-                          fontSize: "14px"
+                          fontSize: "14px",
+                          marginLeft: "4px"
                         }}
                       >
                         ×
@@ -422,17 +585,13 @@ export default function Editor(props: IProps) {
                   type="text"
                   value={newPhid}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPhid(e.target.value)}
-                  placeholder="Add new PHIDs"
+                  onKeyDown={addPhid}
+                  placeholder="Add phd:// or phd:eip155:..."
                   style={{ 
                     width: "100%", 
                     padding: "4px 8px",
                     border: "1px solid #ccc",
                     fontSize: "14px"
-                  }}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      addPhid();
-                    }
                   }}
                 />
               </div>
@@ -509,7 +668,7 @@ export default function Editor(props: IProps) {
                     backgroundColor: "#fff"
                   }}
                 >
-                  <option value="">Add another tag</option>
+                  <option value="">Add a new tag</option>
                   {TAG_OPTIONS
                     .filter(tag => !pendingTags[activeTab].includes(tag as GlobalTag))
                     .map(tag => (
